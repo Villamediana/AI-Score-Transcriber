@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#08080d">
+  <meta name="description" content="Turn any audio into a piano roll, editable sheet music and MIDI.">
+  <title>AI Score Transcriber</title>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2044%2044%22%3E%3Crect%20width%3D%2244%22%20height%3D%2244%22%20rx%3D%2210%22%20fill%3D%22%238b5cf6%22%2F%3E%3Crect%20x%3D%227%22%20y%3D%2221%22%20width%3D%226%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%23fff%22%20opacity%3D%22.7%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2213%22%20width%3D%226%22%20height%3D%2224%22%20rx%3D%223%22%20fill%3D%22%23fff%22%2F%3E%3Crect%20x%3D%2225%22%20y%3D%226%22%20width%3D%226%22%20height%3D%2231%22%20rx%3D%223%22%20fill%3D%22%23fff%22%20opacity%3D%22.85%22%2F%3E%3Crect%20x%3D%2234%22%20y%3D%2217%22%20width%3D%226%22%20height%3D%2220%22%20rx%3D%223%22%20fill%3D%22%23fff%22%20opacity%3D%22.55%22%2F%3E%3C%2Fsvg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v={{ asset_version }}">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/vexflow@4.0.3/build/cjs/vexflow.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" defer></script>
+</head>
+<body>
+
+<div class="shell" id="shell">
+  <aside>
+    <div class="sidebar-head">
+      <div class="logo">
+        <div class="logo-mark">
+          <svg width="17" height="17" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+            <rect x="7"  y="21" width="6" height="16" rx="3" fill="white" opacity=".7"/>
+            <rect x="16" y="13" width="6" height="24" rx="3" fill="white"/>
+            <rect x="25" y="6"  width="6" height="31" rx="3" fill="white" opacity=".85"/>
+            <rect x="34" y="17" width="6" height="20" rx="3" fill="white" opacity=".55"/>
+          </svg>
+        </div>
+        <span class="logo-text">AI Score Transcriber</span>
+      </div>
+      <button type="button" class="icon-btn" id="aboutBtn" title="About" aria-label="About">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>
+        </svg>
+      </button>
+      <button type="button" class="icon-btn" id="collapseBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+
+    <div class="sidebar-body">
+      <form id="form" autocomplete="off">
+        <div class="block">
+          <span class="block-label">Source</span>
+          <div class="seg" id="sourceSeg">
+            <button type="button" class="seg-btn {% if youtube_enabled %}active{% endif %}" data-source="url" {% if not youtube_enabled %}hidden{% endif %}>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 12a11 11 0 00-.15-1.83c-.24-1.35-1.31-2.42-2.66-2.66C18.2 7.15 12 7.15 12 7.15s-6.2 0-8.19.36c-1.35.24-2.42 1.31-2.66 2.66A11 11 0 001 12a11 11 0 00.15 1.83c.24 1.35 1.31 2.42 2.66 2.66C5.8 16.85 12 16.85 12 16.85s6.2 0 8.19-.36a3.11 3.11 0 002.66-2.66A11 11 0 0023 12zM9.8 15.15v-6.3L15.3 12l-5.5 3.15z"/></svg>
+              YouTube
+            </button>
+            <button type="button" class="seg-btn {% if not youtube_enabled %}active{% endif %}" data-source="file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              File
+            </button>
+            <button type="button" class="seg-btn" data-source="example">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              Samples
+            </button>
+          </div>
+        </div>
+
+        <!-- Ficheiro -->
+        <div class="block source-panel" data-panel="file" {% if youtube_enabled %}hidden{% endif %}>
+          <input type="file" id="audioInput" class="file-native"
+                 accept="audio/*,.wav,.mp3,.flac,.ogg,.m4a,.webm">
+          <div class="drop" id="drop">
+            <div id="dropEmpty">
+              <div class="drop-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              </div>
+              <div class="drop-title">Drop audio here</div>
+              <div class="drop-hint">or click to browse<br>MP3, WAV, FLAC, OGG, M4A · up to 50 MB</div>
+            </div>
+            <div class="drop-file" id="dropFile" hidden>
+              <div class="drop-file-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              </div>
+              <div class="drop-file-body">
+                <div class="drop-file-name" id="dropFileName"></div>
+                <div class="drop-file-meta" id="dropFileMeta"></div>
+              </div>
+              <button type="button" class="drop-file-clear" id="dropFileClear" aria-label="Remove file">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Link -->
+        <div class="block source-panel" data-panel="url" {% if not youtube_enabled %}hidden{% endif %}>
+          <input type="url" id="urlInput" placeholder="https://youtube.com/watch?v=..." autocomplete="off">
+        </div>
+
+        <!-- Exemplos -->
+        <div class="block source-panel" data-panel="example" hidden>
+          <input type="text" id="exampleSearch" placeholder="Search samples...">
+          <div class="example-list" id="exampleList"></div>
+        </div>
+
+        <!-- Definições -->
+        <!-- Escondido por agora: os valores por omissão abaixo continuam a ser
+             enviados no formulário (piano, balanced, snap to grid), por isso a
+             transcrição não muda. -->
+        <div class="block" hidden>
+          <span class="block-label">Recognition</span>
+          <div class="setting">
+            <span class="setting-label">Instrument</span>
+            <select id="instrument">
+              <option value="auto">Auto</option>
+              <option value="piano" selected>Piano</option>
+              <option value="guitar">Guitar</option>
+              <option value="voice">Voice</option>
+              <option value="bass">Bass</option>
+            </select>
+          </div>
+          <div class="setting">
+            <span class="setting-label">Detail</span>
+            <select id="sensitivity">
+              <option value="clean">Clean</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="detailed">Detailed</option>
+            </select>
+          </div>
+          <div class="setting">
+            <span class="setting-label">Rhythm</span>
+            <select id="quantize">
+              <option value="auto" selected>Snap to grid</option>
+              <option value="strict">Strict grid</option>
+              <option value="off">Keep as played</option>
+            </select>
+          </div>
+          <div class="setting-hint">Naming the instrument cuts out a lot of false notes. <strong>Clean</strong> keeps only confident notes; <strong>Detailed</strong> catches more, with some noise.</div>
+        </div>
+
+        <button type="submit" class="btn" id="submitBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg>
+          Transcribe
+        </button>
+        <div class="error-box" id="errorBox" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+          <span id="errorText"></span>
+        </div>
+      </form>
+
+      <!-- Controlos do resultado -->
+      <div id="playbackBlock" hidden>
+        <div class="block" hidden>
+          <span class="block-label">Tempo</span>
+          <div class="stepper">
+            <button type="button" class="step-btn" id="bpmMinus" aria-label="Slower">&minus;</button>
+            <input type="number" id="bpmInput" min="30" max="240" step="1" value="120" inputmode="numeric">
+            <button type="button" class="step-btn" id="bpmPlus" aria-label="Faster">+</button>
+          </div>
+          <div class="setting-hint" id="bpmHint">Detected tempo</div>
+          <div class="setting-hint">Sets how the score is divided into bars.</div>
+        </div>
+
+        <div class="block">
+          <span class="block-label">Practice speed</span>
+          <div class="slider-row">
+            <div class="slider-head"><span>Playback</span><span class="slider-val" id="speedVal">1.0×</span></div>
+            <input type="range" id="speed" min="25" max="200" step="5" value="100">
+          </div>
+          <div class="setting-hint">Slow it down to learn a passage — the notes stay where they are.</div>
+        </div>
+
+        <div class="block">
+          <span class="block-label">Mix</span>
+          <div class="slider-row">
+            <div class="slider-head"><span>Original audio</span><span class="slider-val" id="volOriginalVal">70%</span></div>
+            <input type="range" id="volOriginal" min="0" max="100" value="70">
+          </div>
+          <div class="slider-row">
+            <div class="slider-head"><span>Piano</span><span class="slider-val" id="volPianoVal">85%</span></div>
+            <input type="range" id="volPiano" min="0" max="100" value="85">
+          </div>
+        </div>
+
+        <div class="block" id="shareBlock" hidden>
+          <span class="block-label">Share</span>
+          <div class="share-row">
+            <input type="text" id="shareUrl" readonly spellcheck="false">
+            <button type="button" class="share-copy" id="shareCopy" aria-label="Copy link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </button>
+          </div>
+          <div class="setting-hint" id="shareHint">Anyone with this link opens your score, with your edits. It saves by itself.</div>
+        </div>
+
+        <div class="block">
+          <span class="block-label">Export</span>
+          <a class="btn btn-ghost" id="downloadMidi" href="#" download style="text-decoration:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Download MIDI
+          </a>
+          <button type="button" class="btn btn-ghost" id="downloadPdf">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+            Score as PDF
+          </button>
+          <button type="button" class="btn btn-ghost" id="resetBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.36 2.64L3 8"/><path d="M3 3v5h5"/></svg>
+            Start over
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-foot">Miguel Villamediana · 2026</div>
+  </aside>
+
+  <div class="stage" id="stage">
+    <div class="mobile-bar">
+      <button type="button" class="icon-btn" id="menuBtn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <div class="logo" style="flex:1">
+        <div class="logo-mark" style="width:24px;height:24px;border-radius:7px">
+          <svg width="14" height="14" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+            <rect x="7"  y="21" width="6" height="16" rx="3" fill="white" opacity=".7"/>
+            <rect x="16" y="13" width="6" height="24" rx="3" fill="white"/>
+            <rect x="25" y="6"  width="6" height="31" rx="3" fill="white" opacity=".85"/>
+            <rect x="34" y="17" width="6" height="20" rx="3" fill="white" opacity=".55"/>
+          </svg>
+        </div>
+        <span class="logo-text">AI Score Transcriber</span>
+      </div>
+    </div>
+
+    <!-- Vazio -->
+    <div class="stage-empty" id="stageEmpty">
+      <div class="empty-brand">
+        <div class="empty-art">
+          <svg viewBox="0 0 44 44" fill="none" aria-hidden="true">
+            <rect x="7"  y="21" width="6" height="16" rx="3" fill="white" opacity=".7"/>
+            <rect x="16" y="13" width="6" height="24" rx="3" fill="white"/>
+            <rect x="25" y="6"  width="6" height="31" rx="3" fill="white" opacity=".85"/>
+            <rect x="34" y="17" width="6" height="20" rx="3" fill="white" opacity=".55"/>
+          </svg>
+        </div>
+        <div class="empty-wordmark">AI Score Transcriber</div>
+      </div>
+      <h1 class="empty-title">Hear it. See it. Play it.</h1>
+      <p class="empty-text">Drop any audio and get a piano roll, an editable score and a MIDI file — no sheet music needed.</p>
+      <div class="empty-steps">
+        <div class="empty-step"><div class="empty-step-num">1</div><div class="empty-step-text">Choose your audio</div></div>
+        <div class="empty-step"><div class="empty-step-num">2</div><div class="empty-step-text">Let it listen</div></div>
+        <div class="empty-step"><div class="empty-step-num">3</div><div class="empty-step-text">Play and edit</div></div>
+      </div>
+    </div>
+
+    <!-- A trabalhar -->
+    <div class="stage-loading" id="stageLoading" hidden>
+      <div class="progress-ring">
+        <svg viewBox="0 0 120 120">
+          <defs>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#8b5cf6"/>
+              <stop offset="100%" stop-color="#22d3ee"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-track" cx="60" cy="60" r="52"/>
+          <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="52"
+                  stroke-dasharray="326.7" stroke-dashoffset="326.7"/>
+        </svg>
+        <div class="progress-pct" id="progressPct">0%</div>
+      </div>
+      <div class="loading-stage" id="loadingStage">Starting</div>
+      <div class="loading-sub" id="loadingSub">You can keep this tab open — the work carries on in the background.</div>
+      <div class="loading-queue" id="loadingQueue" hidden></div>
+      <button type="button" class="btn btn-ghost" id="cancelBtn" style="width:auto">Cancel</button>
+    </div>
+
+    <!-- Resultado -->
+    <div class="stage-result" id="stageResult" hidden>
+      <div class="stage-top">
+        <div class="tabs" id="tabs">
+          <button type="button" class="tab active" data-view="roll">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4v16M9 4v16M14 4v16M19 4v16"/></svg>
+            <span>Piano roll</span>
+          </button>
+          <button type="button" class="tab" data-view="sheet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 10h18M3 14h18M3 18h18"/></svg>
+            <span>Sheet</span>
+          </button>
+          <button type="button" class="tab" data-view="notes" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            <span>Note data</span>
+          </button>
+        </div>
+        <div class="stage-top-spacer"></div>
+        <span class="source-chip" id="sourceChip"></span>
+        <button type="button" class="tool-btn" id="shareBtnTop" title="Copy share link" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+          <span>Share</span>
+        </button>
+      </div>
+
+      <!-- Piano roll -->
+      <div class="viz" id="viewRoll">
+        <canvas id="roll"></canvas>
+      </div>
+
+      <!-- Partitura -->
+      <div class="sheet-wrap" id="viewSheet" hidden>
+        <div class="sheet-toolbar">
+          <button type="button" class="tool-btn" id="editToggle" title="Edit notes (E)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+            <span>Edit</span>
+          </button>
+          <button type="button" class="tool-btn" id="addToggle" title="Add notes (A)" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Add</span>
+          </button>
+          <div class="sep"></div>
+          <button type="button" class="tool-btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6.36 2.64L3 13"/></svg>
+          </button>
+          <button type="button" class="tool-btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016.36 2.64L21 13"/></svg>
+          </button>
+          <div class="sep"></div>
+          <span class="tool-label">Length</span>
+          <button type="button" class="tool-btn dur-btn" data-slots="16" title="Whole note" disabled>1</button>
+          <button type="button" class="tool-btn dur-btn" data-slots="8" title="Half note" disabled>½</button>
+          <button type="button" class="tool-btn dur-btn" data-slots="4" title="Quarter note" disabled>¼</button>
+          <button type="button" class="tool-btn dur-btn" data-slots="2" title="Eighth note" disabled>⅛</button>
+          <button type="button" class="tool-btn dur-btn" data-slots="1" title="Sixteenth note" disabled>¹⁄₁₆</button>
+          <button type="button" class="tool-btn" id="deleteBtn" title="Delete selected (Del)" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+          </button>
+          <div class="sep"></div>
+          <span class="tool-label">Time</span>
+          <select id="tsNum" class="tool-select">
+            <option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>9</option><option>12</option>
+          </select>
+          <span class="tool-label">/</span>
+          <select id="tsDen" class="tool-select">
+            <option>2</option><option selected>4</option><option>8</option>
+          </select>
+          <div class="sep"></div>
+          <span class="tool-label" id="keyLabel">Key —</span>
+        </div>
+        <div class="sheet-scroll" id="sheetScroll">
+          <div class="sheet-paper" id="sheetPaper">
+            <div class="sheet-playhead" id="sheetPlayhead" hidden></div>
+          </div>
+        </div>
+        <div class="edit-hint" id="editHint" hidden></div>
+      </div>
+
+      <!-- Dados -->
+      <div class="notes-wrap" id="viewNotes" hidden>
+        <div class="notes-summary" id="notesSummary"></div>
+        <table class="notes-table">
+          <thead><tr><th>#</th><th>Start</th><th>End</th><th>Length</th><th>Note</th><th>MIDI</th><th>Confidence</th></tr></thead>
+          <tbody id="notesBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Transporte -->
+      <div class="transport">
+        <button type="button" class="play-btn" id="playBtn" aria-label="Play">
+          <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+          <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h4v16H7zM13 4h4v16h-4z"/></svg>
+        </button>
+        <span class="time" id="timeLabel">0:00 / 0:00</span>
+        <div class="seek-wrap"><input type="range" class="seek" id="seek" min="0" max="1000" value="0"></div>
+        <!-- Escondidos por agora. Continuam no DOM e ligados: o estado deles
+             (ambos ligados) é o que o transporte lê, e os volumes de cada um
+             ajustam-se na barra lateral, em "Mix". -->
+        <div class="mix" hidden>
+          <button type="button" class="mix-btn on" id="mixAudio" title="Hear the original recording">Audio</button>
+          <button type="button" class="mix-btn on" id="mixPiano" title="Hear the transcribed notes">Piano</button>
+        </div>
+        <div class="transport-actions">
+          <button type="button" class="tool-btn" id="loopBtn" title="Loop">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <audio id="player" preload="auto" crossorigin="anonymous"></audio>
+    </div>
+  </div>
+
+  <!-- Dentro do .shell de propósito: o .shell cria um contexto de empilhamento
+       (position:relative + z-index:1), por isso um scrim colocado fora dele
+       ficava por cima da barra lateral inteira - e no telemóvel comia todos os
+       toques no menu. Aqui dentro, o z-index volta a comparar-se com o do
+       aside e o scrim fica onde deve: por cima do palco, por baixo do menu. -->
+  <div class="scrim" id="scrim"></div>
+</div>
+
+<button type="button" class="sidebar-toggle-float" id="expandBtn" aria-label="Expand sidebar">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+</button>
+
+<div class="toast-host" id="toastHost"></div>
+
+<!-- Sobre -->
+<div class="modal" id="aboutModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span class="modal-title">About</span>
+      <button type="button" class="icon-btn" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p><strong>AI Score Transcriber</strong> listens to audio and writes down what it hears: a piano roll you can watch, a score you can edit, and a MIDI file you can take anywhere.</p>
+      <p>It works with any instrument and with several notes at once. Piano and solo instruments come out cleanest; dense mixes with drums and vocals are the hardest.</p>
+      <p>Every transcription gets its own link, and your edits save into it as you make them. Copy it from <strong>Share</strong> to pick the work up on another device, or to send it to someone. The score keeps working for good; the original audio it was made from is kept for two weeks.</p>
+      <p style="margin-top:1rem"><strong>Keyboard</strong></p>
+      <div class="shortcut-grid" style="margin-top:.5rem">
+        <kbd>Space</kbd><span>Play / pause</span>
+        <kbd>E</kbd><span>Toggle score editing</span>
+        <kbd>A</kbd><span>Add-note mode</span>
+        <kbd>↑ ↓</kbd><span>Move selected note by a semitone</span>
+        <kbd>⇧ ↑ ↓</kbd><span>Move by an octave</span>
+        <kbd>← →</kbd><span>Shift selected note in time</span>
+        <kbd>Del</kbd><span>Delete selected</span>
+        <kbd>Ctrl+Z</kbd><span>Undo</span>
+      </div>
+      <p style="margin-top:1rem">
+        <strong>Repo:</strong> <a href="https://github.com/Villamediana/AIScoreTranscriber" target="_blank" rel="noopener">github.com/Villamediana/AIScoreTranscriber</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.APP_CONFIG = {
+    youtubeEnabled: {{ 'true' if youtube_enabled else 'false' }},
+    maxUploadMb: {{ max_upload_mb }},
+    bootstrapToken: {{ ('"' ~ bootstrap_token ~ '"') | safe if bootstrap_token else 'null' }},
+    pianoSamples: '{{ url_for("static", filename="audio/piano/") }}'
+  };
+</script>
+<script src="{{ url_for('static', filename='js/synth.js') }}?v={{ asset_version }}"></script>
+<script src="{{ url_for('static', filename='js/sheet.js') }}?v={{ asset_version }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v={{ asset_version }}" defer></script>
+</body>
+</html>

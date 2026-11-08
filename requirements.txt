@@ -1,0 +1,24 @@
+# Build tools (evita erro "Cannot import setuptools.build_meta")
+setuptools>=65.0.0
+wheel>=0.40.0
+
+# Web app
+flask>=3.0.0
+werkzeug>=3.0.0
+gunicorn>=21.0.0
+music21>=9.0.0
+python-dotenv>=1.0.1
+yt-dlp>=2025.1.0
+yt-dlp-ejs  # necessário para YouTube em yt-dlp 2025.11+ (lista completa de formatos)
+imageio-ffmpeg>=0.5.1
+
+# Audio
+numpy>=1.23
+librosa>=0.10.0
+soundfile>=0.12.0
+pretty_midi>=0.2.10
+
+# Transcrição. O basic-pitch corre em ONNX Runtime - não é preciso TensorFlow,
+# e é o ONNX que permite correr em Python 3.13 (o TF 2.14 parava no 3.11).
+basic-pitch==0.4.0
+onnxruntime>=1.17.0
