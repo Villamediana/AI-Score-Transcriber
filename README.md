@@ -1,198 +1,124 @@
-# AI Score Transcriber
+<div align="center">
 
-Web app that turns **audio into MIDI and sheet music** using the open source library [Basic Pitch](https://github.com/spotify/basic-pitch). Upload an audio file → **piano roll**, **sheet music** (PDF downloadable), **playback**, and **MIDI** download.
+# 🎹 AI Score Transcriber
 
-**Live demo:** [https://aiscoretranscriber.com/](https://aiscoretranscriber.com/)
+**Drop in a song. Get the sheet music.**
 
----
+Audio → MIDI → a readable piano score you can edit, play back and export.
 
-## About
+[**▶ Try it live**](https://piano.simplyonegoal.com) &nbsp;·&nbsp; [How it works](#how-it-works) &nbsp;·&nbsp; [Run it yourself](#run-it-yourself)
 
-It's often hard to find piano scores for specific pieces. **AI Score Transcriber** generates both a MIDI file and a readable piano score (partitura) from any audio so you can practice with a visual score without needing the official sheet music. Works with any instrument (polyphonic). Runs on ONNX — no TensorFlow needed.
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?logo=flask&logoColor=white)
+![ONNX](https://img.shields.io/badge/Basic%20Pitch-ONNX-005CED?logo=onnx&logoColor=white)
+![VexFlow](https://img.shields.io/badge/VexFlow-sheet%20music-8E44AD)
+![Web Audio](https://img.shields.io/badge/Web%20Audio-synth-F7DF1E?logo=javascript&logoColor=black)
 
----
-
-## Features
-
-| Area | Description |
-|------|-------------|
-| **Input** | Local file (WAV, MP3, FLAC, OGG, M4A, WEBM, up to 50 MB), YouTube link, or a bundled sample. |
-| **Transcription** | Runs **in the background**: the request returns a `job_id` immediately and the page polls for real progress. Long files are processed in overlapping chunks, so the progress bar reflects actual work and memory stays flat. |
-| **Recognition** | Tunable detail (clean / balanced / detailed) and instrument range, which cuts out most false notes. Tempo and beat grid come from `librosa` beat tracking; fragmented notes are merged and octave artefacts removed. |
-| **Views** | **Piano roll** (waterfall + playable keyboard), **Sheet** (VexFlow, with detected key signature), and **Note data**. |
-| **Sheet editing** | Drag a note to change its pitch, set its length, add notes by clicking, delete, and undo/redo. Edits flow into the exported MIDI and PDF. |
-| **Playback** | The transcription is played by a **synthesised piano in the browser**, scheduled on the Web Audio clock, so you hear the notes themselves — in time. The original recording plays alongside it and can be muted independently. |
-| **Practice** | Playback speed is separate from the notated tempo: slow a passage down without re-barring the score. |
-| **Export** | **MIDI** (including your edits), **score as PDF**, or the original audio. Results expire after 1 hour. |
+</div>
 
 ---
 
-## Mobile and tablet
+Finding the score for *that one piece* is often impossible. This app listens to any recording — piano, guitar, a voice, a full band — and writes down the notes for you, so you can practise from a score instead of by ear.
 
-- **File size:** Uploads are limited to **50 MB**. Larger files will show “File too large”.
-- **Choosing a file:** On phones/tablets, tap **Upload File** and pick the audio from your device (e.g. **Files** or **Downloads**). The app accepts common audio types (including MP3). If the picker does not show your file, try opening it from the **Files** (or equivalent) app and use “Share” / “Open with” if your browser supports it.
-- **“Network error” or “Connection error”:** This often means:
-  - The file is large or the connection is slow, and the request **timed out** (try a shorter track or Wi‑Fi).
-  - The file is **over 50 MB** (try a shorter or lower-quality file).
-  - The connection dropped (try again on a stable network).
+It runs on Spotify's open-source [Basic Pitch](https://github.com/spotify/basic-pitch) model (ONNX, no TensorFlow), plus a lot of clean-up so the result reads like music and not like noise.
 
----
+## What you get
 
-## Quick start
+- 🎧 **Any input** — upload WAV / MP3 / FLAC / OGG / M4A / WEBM (up to 50 MB), paste a YouTube link, or try the bundled sample.
+- 🌊 **Piano roll** — notes fall onto a playable keyboard, in time with the original audio.
+- 🎼 **Real sheet music** — rendered with VexFlow, with the key signature detected for you.
+- ✏️ **Edit the score** — drag a note to change pitch, set lengths, add or delete notes, undo/redo. Every edit flows into the exports.
+- 🔊 **Hear it** — a piano synthesised in the browser plays *the transcription itself*, next to the original recording (mute either one).
+- 🐢 **Practise slowly** — change playback speed without re-barring the score.
+- 💾 **Export** — MIDI (with your edits), the score as PDF, or the audio.
 
-**1. Clone the repo**
+## How it works
 
-```bash
-git clone https://github.com/Villamediana/AIScoreTranscriber
-cd AIScoreTranscriber
+```mermaid
+flowchart LR
+    A[🎵 Audio or YouTube] --> B[FFmpeg<br/>normalise]
+    B --> C[Basic Pitch<br/>ONNX, in chunks]
+    C --> D[Clean-up<br/>merge fragments, fix octaves,<br/>instrument range]
+    D --> E[librosa<br/>tempo + beat grid]
+    E --> F[🎼 VexFlow score]
+    E --> G[🌊 Piano roll]
+    F --> H[MIDI / PDF]
 ```
 
-**2. Install**
+- Transcription runs **in the background**: the page gets a job id right away and shows real progress while long files are processed in overlapping chunks (memory stays flat).
+- **Detail level** (clean / balanced / detailed) and the **instrument range** cut out most false notes.
+- Results expire after one hour — nothing is kept.
 
-Requires **Python 3.10 or newer** (tested on 3.13).
+## Run it yourself
 
-- **Windows:** `py -3 -m venv venv`
-- **Linux/macOS:** `python3 -m venv venv`
+Requires **Python 3.10+**.
 
 ```bash
-python -m venv venv
-venv\Scripts\activate
-python -m pip install --upgrade pip
+git clone https://github.com/Villamediana/AI-Score-Transcriber
+cd AI-Score-Transcriber
+python3 -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-*(On Linux/macOS use `source venv/bin/activate` instead of `venv\Scripts\activate`.)*
-
-**3. Run**
-
-```bash
 python app.py
 ```
 
-Open **http://127.0.0.1:5000**
+Open **http://127.0.0.1:5000**, drop a file, hit **Transcribe**.
 
-**4. Use**
+<details>
+<summary><b>Enabling the YouTube tab</b></summary>
 
-1. Upload an audio file.
-2. Click **Transcribe**.
-3. Switch between **Piano** and **Sheet** views; use **Note data** for details; adjust volume/BPM; download **MIDI** or **PDF** (Sheet view).
+<br>
+
+YouTube usually blocks downloads without a logged-in session, so the YouTube tab only shows up when the app has a cookies file.
+
+1. Export your YouTube cookies in **Netscape format** — e.g. with the [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) extension (a secondary account is a good idea), or:
+   ```bash
+   yt-dlp --cookies-from-browser chrome --cookies cookies.txt "https://www.youtube.com"
+   ```
+2. Point the app at it before starting:
+   ```bash
+   export YOUTUBE_COOKIES_FILE="$HOME/AI-Score-Transcriber/cookies.txt"
+   ```
+3. For yt-dlp 2025.11+, install [Deno](https://deno.land) and keep `~/.deno/bin` on your `PATH` — the app already enables the EJS component.
+
+`cookies.txt` is git-ignored. Never commit or share it. Cookies expire; export a fresh file when YouTube starts blocking again.
+
+</details>
+
+<details>
+<summary><b>On a phone or tablet</b></summary>
+
+<br>
+
+- Tap **Upload File** and pick the audio from *Files* or *Downloads*.
+- "Network error" usually means the file is over 50 MB or the connection timed out — try a shorter track or Wi-Fi.
+
+</details>
+
+## Under the hood
+
+```
+app.py                      Flask routes, job endpoints, audio conversion
+jobs.py                     background queue: progress, cancel, expiry
+transcribe/
+  basic_pitch_module.py     Basic Pitch (cached ONNX), chunking, tempo grid, clean-up
+static/js/
+  synth.js                  piano voice + look-ahead scheduler on the audio clock
+  sheet.js                  score model, rhythm grid, key detection, VexFlow
+  app.js                    UI, job polling, piano roll, editor, transport, export
+templates/index.html
+```
+
+| Job | Library |
+|---|---|
+| Notes from audio | `basic-pitch` (ONNX) |
+| Tempo & beats | `librosa` |
+| MIDI | `pretty_midi` |
+| Audio conversion | `imageio-ffmpeg` |
+| Score in the browser | VexFlow · Tone.js MIDI · jsPDF |
+| Piano sound | Web Audio, synthesised — no samples to download |
 
 ---
 
-## Project structure
-
-```
-AIScoreTranscriber/
-├── app.py                     # Flask app: routes, job endpoints, audio conversion
-├── jobs.py                    # Background transcription queue (progress, cancel, TTL)
-├── requirements.txt
-├── README.md
-├── transcribe/
-│   ├── __init__.py
-│   └── basic_pitch_module.py  # Basic Pitch (cached ONNX), chunking, tempo grid, cleanup
-├── static/
-│   ├── css/app.css            # Dark studio design system
-│   └── js/
-│       ├── synth.js           # Piano voice + look-ahead scheduler on the audio clock
-│       ├── sheet.js           # Score model, rhythm grid, key detection, VexFlow renderer
-│       └── app.js             # Shell, job polling, piano roll, editor, transport, export
-└── templates/
-    └── index.html
-```
-
----
-
-## Screenshots
-
-Screenshots of the app are in the [`screenshots/`](https://github.com/Villamediana/AIScoreTranscriber/tree/main/screenshots) folder. Add your captures there and reference them in the README or in issues/PRs as needed.
-
----
-
-## YouTube (cookies + optional EJS)
-
-The **YouTube** tab (and on mobile the **YouTube** button + modal) only appears when the app is configured with a **cookies file**. Without it, YouTube often blocks downloads (“Sign in to confirm you're not a bot”). Follow the steps below to enable it.
-
-### 1. Create the cookies file
-
-Export your YouTube session cookies from a browser in **Netscape format**:
-
-- **Chrome (recommended):** Install the extension [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc). Open [youtube.com](https://www.youtube.com), log in (prefer a secondary account), then use the extension to export cookies for the current site. Save as `cookies.txt`.
-- **Command line (yt-dlp):** With Chrome closed or another profile, run:  
-  `yt-dlp --cookies-from-browser chrome --cookies cookies.txt "https://www.youtube.com"`  
-  This creates/overwrites `cookies.txt` in the current folder.
-
-The first line of the file must be `# Netscape HTTP Cookie File`. **Do not commit this file or share it** (it contains session data).
-
-### 2. Where to put the file
-
-Place `cookies.txt` in a fixed path, for example:
-
-- **Windows:** `C:\Users\<you>\.config\NoteAIs\cookies.txt` or inside the project folder.
-- **Linux / server:** `~/AIScoreTranscriber/cookies.txt` or `~/.config/AIScoreTranscriber/cookies.txt`.
-
-The project’s `.gitignore` already ignores `*.txt` (except `requirements.txt`), so `cookies.txt` will not be committed.
-
-### 3. Set the environment variable
-
-The app reads the path from **`YOUTUBE_COOKIES_FILE`**. Set it **before** starting the app.
-
-**Windows (PowerShell)** — current session only:
-
-```powershell
-$env:YOUTUBE_COOKIES_FILE = "C:\Users\<you>\...\cookies.txt"
-```
-
-**Windows (permanent, current user):**
-
-```powershell
-[System.Environment]::SetEnvironmentVariable("YOUTUBE_COOKIES_FILE", "C:\Users\<you>\...\cookies.txt", "User")
-```
-
-Then restart the terminal/IDE and run the app.
-
-**Linux / macOS** — current session:
-
-```bash
-export YOUTUBE_COOKIES_FILE="$HOME/AIScoreTranscriber/cookies.txt"
-```
-
-**Linux / macOS (permanent):** add to `~/.bashrc` (or equivalent):
-
-```bash
-echo 'export YOUTUBE_COOKIES_FILE="$HOME/AIScoreTranscriber/cookies.txt"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### 4. Server (VPS / production)
-
-On the server:
-
-1. Create the file, e.g. `touch ~/AIScoreTranscriber/cookies.txt`, then edit it and paste the Netscape-format cookies (exported on your PC and copied over, or via SCP).
-2. Set the variable in the **same environment** that starts the app:
-   - **Option A:** In the same shell: `export YOUTUBE_COOKIES_FILE="$HOME/AIScoreTranscriber/cookies.txt"`, then start the app (e.g. `nohup venv/bin/python app.py ...`). If you use a new shell later, run `source ~/.bashrc` first if you added the export there.
-   - **Option B:** Add the export to `~/.bashrc` as above, open a **new** SSH session, then start the app so it inherits the variable.
-3. Restart the app after changing the variable so the process sees it.
-
-Cookies expire; if YouTube starts blocking again, export a fresh `cookies.txt` and replace the file (and restart the app if needed).
-
-### 5. Optional: full format support (yt-dlp 2025.11+)
-
-From yt-dlp **2025.11** onward, YouTube may return “Requested format is not available” unless a JavaScript runtime and the EJS component are available. The app already enables `remote_components: ["ejs:github"]` and `requirements.txt` includes `yt-dlp-ejs`. On the **server**, install:
-
-- **Deno:** `curl -fsSL https://deno.land/install.sh | sh` and add `~/.deno/bin` to `PATH` (e.g. in `~/.bashrc`).
-- **yt-dlp-ejs in the venv:** `venv/bin/pip install yt-dlp-ejs`.
-
-Start the app in a shell where `deno` is on `PATH` so yt-dlp can resolve formats correctly.
-
----
-
-## Dependencies
-
-| Purpose | Dependency |
-|--------|------------|
-| Transcription | `basic-pitch` (ONNX) |
-| Audio conversion | `imageio-ffmpeg` (FFmpeg) |
-| MIDI writing | `pretty_midi` |
-| Tempo & beat tracking | `librosa` |
-| Sheet music (browser) | VexFlow, Tone.js MIDI, jsPDF (CDN) |
-| Piano sound | Web Audio, synthesised in the browser (no samples to download) |
+<div align="center">
+<sub>Made by <a href="https://github.com/Villamediana">Miguel Villamediana</a> · works with any instrument, sounds best with piano 🎹</sub>
+</div>
